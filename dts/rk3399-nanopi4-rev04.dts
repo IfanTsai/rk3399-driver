@@ -1,0 +1,96 @@
+/*
+ * Copyright (c) 2018 FriendlyElec Computer Tech. Co., Ltd.
+ * (http://www.friendlyarm.com)
+ *
+ * This program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License
+ * as published by the Free Software Foundation; either version 2
+ * of the License, or (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
+/dts-v1/;
+#include "rk3399-nanopi4-common.dtsi"
+
+/ {
+	model = "FriendlyElec NanoPi NEO4";
+	compatible = "friendlyelec,nanopi-neo4", "rockchip,rk3399";
+
+    /* Ifan Tsai added */
+    ////////////////////////////////////////////////////////////
+	interrupt-parent = <&gic>;
+	#address-cells = <2>;
+	#size-cells = <2>;
+
+	rktimer2: rk_timer@ff850020 {
+		compatible = "rockchip,rk-timer2";
+		reg = <0x0 0xff850020 0x0 0x100>;
+		interrupts = <GIC_SPI 82 IRQ_TYPE_LEVEL_HIGH 0>;
+		clocks = <&cru PCLK_TIMER1>, <&cru SCLK_TIMER01>;
+		clock-names = "pclk", "timer";
+	};
+
+    led_red: led_red {
+        compatible = "rockchip,led_red";
+        led_gpio = <&gpio1 0 GPIO_ACTIVE_LOW>;      // GPIO1_A0 -- pin7
+        led_name = "led_red";
+    };
+
+    led_green: led_green {
+        compatible = "rockchip,led_green";
+        led_gpio = <&gpio1 1 GPIO_ACTIVE_LOW>;      // GPIO1_A1 -- pin11
+        led_name = "led_green";
+    };
+
+    led_yellow: led_yellow {
+        compatible = "rockchip,led_yellow";
+        led_gpio = <&gpio1 4 GPIO_ACTIVE_LOW>;      // GPIO1_A4 -- pin15
+        led_name = "led_yellow";
+    };
+    /////////////////////////////////////////////////////////////
+};
+
+&mach {
+	hwrev = <4>;
+	model = "NanoPi NEO4";
+};
+
+&sdhci {
+	mmc-hs200-1_8v;
+	/delete-property/ mmc-hs400-1_8v;
+	/delete-property/ mmc-hs400-enhanced-strobe;
+};
+
+&i2s1 {
+	status = "disabled";
+	rockchip,i2s-broken-burst-len;
+	rockchip,playback-channels = <2>;
+	rockchip,capture-channels = <2>;
+	#sound-dai-cells = <0>;
+};
+
+&rt5651_card {
+	status = "disabled";
+	/delete-property/ pinctrl-0;
+	/delete-property/ simple-audio-card,hp-det-gpio;
+
+	simple-audio-card,cpu {
+		sound-dai = <&i2s1>;
+	};
+};
+
+&rk_wlan {
+	status = "okay";
+	wifi_chip_type = "ap6212";
+};
+
+&rk_bluetooth {
+	status = "okay";
+};
