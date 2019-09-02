@@ -6,9 +6,18 @@
 #include <linux/cdev.h>
 #include <linux/uaccess.h>
 #include <linux/slab.h>
+#include <linux/delay.h>
 
 static struct class *led_class;
 #define LED_CLASS "rk_led_class"
+
+#define LED_ON_LEVEL    (1)
+#define LED_OFF_LEVEL   (0)
+
+#define LED_MAGIC      'c'
+#define IOCTL_LED_ON    _IOW(LED_MAGIC, 1, int)
+#define IOCTL_LED_OFF   _IOW(LED_MAGIC, 2, int)
+#define IOCTL_LED_SET_SHINE_CNT    _IOW(LED_MAGIC, 3, int)
 
 struct led_data {
 	unsigned int led_gpio;
@@ -17,15 +26,50 @@ struct led_data {
 	struct cdev led_cdev;
 };
 
+static long led_ioctl(struct file *file, unsigned int cmd, unsigned long cnt)
+{
+	struct led_data *led_data = file->private_data;
+
+	switch (cmd) {
+	case IOCTL_LED_ON:
+		gpio_direction_output(led_data->led_gpio, LED_ON_LEVEL);
+		pr_err("====> %s: led_ioctl on!\n", led_data->led_name);
+		break;
+	case IOCTL_LED_OFF:
+		gpio_direction_output(led_data->led_gpio, LED_OFF_LEVEL);
+		pr_err("====> %s: led_ioctl off!\n", led_data->led_name);
+		break;
+	case IOCTL_LED_SET_SHINE_CNT:
+	{
+		int i, val = gpio_get_value(led_data->led_gpio);
+
+		pr_err("====> %s: led_ioctl set shine count %ld!\n", led_data->led_name, cnt);
+		for (i = 0; i < cnt; i++) {
+			gpio_direction_output(led_data->led_gpio, !val);
+			mdelay(500);
+			gpio_direction_output(led_data->led_gpio, val);
+			mdelay(500);
+		}
+		break;
+	}
+	default:
+		break;
+	}
+	return 0;
+}
+
 static ssize_t led_read(struct file *file, char __user *ubuf,
-				size_t count, loff_t *offset)
+		size_t count, loff_t *offset)
 {
 	char kbuf[8] = { 0 };
 	struct led_data *led_data = file->private_data;
 	int val = gpio_get_value(led_data->led_gpio);
 
+	if (*offset >= sizeof(min(sizeof(kbuf), count)))
+		return 0;
+
 	sprintf(kbuf, "%d", val);
-	if (copy_to_user(ubuf, &val, min(sizeof(kbuf), count))) {
+	if (copy_to_user(ubuf, kbuf, min(sizeof(kbuf), count))) {
 		pr_err("copy_to_user error!!!\n");
 		return -EINVAL;
 	}
@@ -33,7 +77,7 @@ static ssize_t led_read(struct file *file, char __user *ubuf,
 }
 
 static ssize_t led_write(struct file *file, const char __user *ubuf,
-				size_t count, loff_t *offset)
+		size_t count, loff_t *offset)
 {
 	int val;
 	char kbuf[8] = { 0 };
@@ -54,8 +98,9 @@ static ssize_t led_write(struct file *file, const char __user *ubuf,
 
 static int led_open(struct inode *inode, struct file *file)
 {
-	struct led_data *led_data = container_of(inode->i_cdev, struct led_data, led_cdev);
+	struct led_data *led_data;
 
+	led_data = container_of(inode->i_cdev, struct led_data, led_cdev);
 	file->private_data = led_data;
 	return 0;
 }
@@ -66,11 +111,13 @@ static int led_release(struct inode *inode, struct file *file)
 }
 
 static const struct file_operations led_fops = {
-	.owner		= THIS_MODULE,
-	.open		= led_open,
-	.release	= led_release,
-	.read       = led_read,
-	.write      = led_write,
+	.owner		        = THIS_MODULE,
+	.open		        = led_open,
+	.release	        = led_release,
+	.read	            = led_read,
+	.write              = led_write,
+	.unlocked_ioctl     = led_ioctl,
+	.compat_ioctl       = led_ioctl,
 };
 
 static int led_probe(struct platform_device *pdev)
@@ -102,9 +149,9 @@ static int led_probe(struct platform_device *pdev)
 		goto out_alloc_chrdev;
 	}
 
-	led_data = kzalloc(sizeof(struct led_data), GFP_KERNEL);
+	led_data = kzalloc(sizeof(*led_data), GFP_KERNEL);
 	if (!led_data) {
-		pr_err("kzalloc error!\n");
+		pr_err("could not allocate led_data!\n");
 		goto out_kzalloc;
 	}
 
@@ -116,12 +163,7 @@ static int led_probe(struct platform_device *pdev)
 		goto out_cdev_add;
 	}
 
-	if (IS_ERR(led_class)) {
-		pr_err("class create %s failed!\n", led_name);
-		goto out_class_create;
-	}
 	device_create(led_class, NULL, led_dev, NULL, led_name);
-
 
 	led_data->led_dev  = led_dev;
 	led_data->led_gpio = led_gpio;
@@ -131,8 +173,6 @@ static int led_probe(struct platform_device *pdev)
 	pr_err("=========> %s probe success!\n", led_data->led_name);
 	return 0;
 
-out_class_create:
-	cdev_del(&led_data->led_cdev);
 out_cdev_add:
 	kfree(led_data);
 out_kzalloc:
@@ -145,8 +185,8 @@ out_alloc_chrdev:
 static int led_remove(struct platform_device *pdev)
 {
 	struct led_data *led_data = platform_get_drvdata(pdev);
-	device_destroy(led_class, led_data->led_dev);
 
+	device_destroy(led_class, led_data->led_dev);
 	cdev_del(&led_data->led_cdev);
 	unregister_chrdev_region(led_data->led_dev, 1);
 	gpio_free(led_data->led_gpio);
@@ -176,6 +216,10 @@ static struct platform_driver rk_led = {
 static int __init rk_led_init(void)
 {
 	led_class = class_create(THIS_MODULE, LED_CLASS);
+	if (IS_ERR(led_class)) {
+		pr_err("class create %s failed!\n", LED_CLASS);
+		return -EINVAL;
+	}
 	return platform_driver_register(&rk_led);
 }
 
