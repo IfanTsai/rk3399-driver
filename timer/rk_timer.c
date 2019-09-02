@@ -12,12 +12,9 @@
 #include <linux/clk.h>
 #include <linux/clockchips.h>
 #include <linux/ioctl.h>
-
-#ifdef CONFIG_OF
 #include <linux/of_irq.h>
 #include <linux/of.h>
 #include <linux/of_address.h>
-#endif
 
 #define RK_DEV_MAX   1
 
@@ -51,7 +48,7 @@ struct rk_timer {
 
 static void __iomem *timer_base;
 
-struct rk_timer *g_ptimer;
+static struct rk_timer *g_ptimer;
 
 DECLARE_WAIT_QUEUE_HEAD(rk_timer_wq);
 
@@ -179,33 +176,32 @@ static unsigned int rk_timer_poll(struct file *file, poll_table *wait)
 	return ret;
 }
 
-static long
-rk_timer_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
+static long rk_timer_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 {
 	struct rk_timer *timer;
 
 	timer = container_of(file->private_data, struct rk_timer, miscdev);
 
 	switch (cmd) {
-	case RK_TIMER_START:
-		timer_enable(timer);
-		break;
-	case RK_TIMER_STOP:
-		timer_disable(timer);
-		break;
-	case RK_TIMER_SET_INTERVAL:
-	{
-		unsigned int val;
+		case RK_TIMER_START:
+			timer_enable(timer);
+			break;
+		case RK_TIMER_STOP:
+			timer_disable(timer);
+			break;
+		case RK_TIMER_SET_INTERVAL:
+		{
+			unsigned int val;
 
-		if (copy_from_user(&val, (void __user *)arg, sizeof(int)))
-			return -EFAULT;
+			if (copy_from_user(&val, (void __user *)arg, sizeof(int)))
+				return -EFAULT;
 
-		timer->interval = val;
-		timer_set_interval(timer, timer->interval);
-		break;
-	}
-	default:
-		return -ENOTTY;
+			timer->interval = val;
+			timer_set_interval(timer, timer->interval);
+			break;
+		}
+		default:
+			return -ENOTTY;
 	}
 
 	return 0;
@@ -307,9 +303,7 @@ static int rk_timer_probe(struct platform_device *pdev)
 	g_ptimer = timer;
 
 	timer->irq = irq;
-	err = request_irq(
-					irq, rk_timer_interrupt,
-					IRQF_TIMER, "rk_timer2", NULL);
+	err = request_irq(irq, rk_timer_interrupt, IRQF_TIMER, "rk_timer2", NULL);
 
 	if (err < 0) {
 		pr_err("fail to request rk_timer2 irq\n");
@@ -354,15 +348,12 @@ static const struct dev_pm_ops rk_timer_pm_ops = {
 	.suspend = rk_timer_suspend,
 	.resume  = rk_timer_resume,
 };
-
 #endif
 
-#ifdef CONFIG_OF
 static const struct of_device_id rk_timer_of_ids[] = {
 	{ .compatible = "rockchip,rk-timer2", },
 	{}
 };
-#endif
 
 static struct platform_driver rk_timer_driver = {
 	.probe = rk_timer_probe,
@@ -370,12 +361,10 @@ static struct platform_driver rk_timer_driver = {
 	.driver = {
 		.name = "rk_timer2",
 		.owner = THIS_MODULE,
-#if defined CONFIG_PM
+#ifdef CONFIG_PM
 		.pm = &rk_timer_pm_ops,
 #endif
-#ifdef CONFIG_OF
 		.of_match_table = rk_timer_of_ids,
-#endif
 	},
 };
 
@@ -394,4 +383,4 @@ module_exit(rk_timer_exit);
 
 MODULE_LICENSE("GPL");
 MODULE_AUTHOR("Ifan Tsai <i@caiyifan.cn>");
-MODULE_DESCRIPTION("rk3399 timer2");
+MODULE_DESCRIPTION("timer driver for rk3399");
