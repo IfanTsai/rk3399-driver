@@ -32,11 +32,11 @@ static long led_ioctl(struct file *file, unsigned int cmd, unsigned long cnt)
 
 	switch (cmd) {
 	case IOCTL_LED_ON:
-		gpio_direction_output(led_data->led_gpio, LED_ON_LEVEL);
+		gpio_set_value(led_data->led_gpio, LED_ON_LEVEL);
 		pr_err("====> %s: led_ioctl on!\n", led_data->led_name);
 		break;
 	case IOCTL_LED_OFF:
-		gpio_direction_output(led_data->led_gpio, LED_OFF_LEVEL);
+		gpio_set_value(led_data->led_gpio, LED_OFF_LEVEL);
 		pr_err("====> %s: led_ioctl off!\n", led_data->led_name);
 		break;
 	case IOCTL_LED_SET_SHINE_CNT:
@@ -45,9 +45,9 @@ static long led_ioctl(struct file *file, unsigned int cmd, unsigned long cnt)
 
 		pr_err("====> %s: led_ioctl set shine count %ld!\n", led_data->led_name, cnt);
 		for (i = 0; i < cnt; i++) {
-			gpio_direction_output(led_data->led_gpio, !val);
+			gpio_set_value(led_data->led_gpio, !val);
 			mdelay(500);
-			gpio_direction_output(led_data->led_gpio, val);
+			gpio_set_value(led_data->led_gpio, val);
 			mdelay(500);
 		}
 		break;
@@ -92,7 +92,7 @@ static ssize_t led_write(struct file *file, const char __user *ubuf,
 		return -EINVAL;
 	}
 	pr_err("====> %s: val = %d\n", led_data->led_name, val);
-	gpio_direction_output(led_data->led_gpio, val);
+	gpio_set_value(led_data->led_gpio, val);
 	return min(sizeof(kbuf), count);
 }
 
