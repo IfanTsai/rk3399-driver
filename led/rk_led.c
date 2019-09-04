@@ -61,10 +61,14 @@ static long led_ioctl(struct file *file, unsigned int cmd, unsigned long cnt)
 static ssize_t led_read(struct file *file, char __user *ubuf,
 		size_t count, loff_t *offset)
 {
+	int val;
 	char kbuf[8] = { 0 };
 	struct led_data *led_data = file->private_data;
-	int val = gpio_get_value(led_data->led_gpio);
 
+	gpio_direction_input(led_data->led_gpio);
+	val = gpio_get_value(led_data->led_gpio);
+	gpio_direction_output(led_data->led_gpio, val);
+	
 	if (*offset >= sizeof(min(sizeof(kbuf), count)))
 		return 0;
 
