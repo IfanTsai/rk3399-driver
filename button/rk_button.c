@@ -73,7 +73,7 @@ static unsigned int button_poll(struct file *file, struct poll_table_struct *wai
 	button_data = container_of(file->private_data, struct button_data, misc);
 	poll_wait(file, &button_data->waitq, wait);
 	if (button_data->ev_press)
-		mask |= POLLIN | POLLRDNORM;
+		mask |= (POLLIN | POLLRDNORM);
 
 	return mask;
 }
@@ -173,7 +173,6 @@ static int button_remove(struct platform_device *pdev)
 
 static const struct of_device_id rk_button_of_match[] = {
 	{ .compatible = "rockchip,button_blue", },
-	{ .compatible = "rockchip,button_red", },
 	{ },
 };
 
