@@ -37,23 +37,23 @@
 		clock-names = "pclk", "timer";
 	};
 
-    led_red: led_red {
-        compatible = "rockchip,led_red";
-        led_gpio   = <&gpio1 0 GPIO_ACTIVE_LOW>;      // GPIO1_A0 -- pin7
-        led_name   = "led_red";
-    };
+	led_red: led_red {
+		compatible = "rockchip,led_red";
+		led_gpio   = <&gpio1 0 GPIO_ACTIVE_LOW>;      // GPIO1_A0 -- pin7
+		led_name   = "led_red";
+	};
 
-    led_green: led_green {
-        compatible = "rockchip,led_green";
-        led_gpio   = <&gpio1 1 GPIO_ACTIVE_LOW>;      // GPIO1_A1 -- pin11
-        led_name   = "led_green";
-    };
+	led_green: led_green {
+		compatible = "rockchip,led_green";
+		led_gpio   = <&gpio1 1 GPIO_ACTIVE_LOW>;      // GPIO1_A1 -- pin11
+		led_name   = "led_green";
+	};
 
-    led_yellow: led_yellow {
-        compatible = "rockchip,led_yellow";
-        led_gpio   = <&gpio1 4 GPIO_ACTIVE_LOW>;      // GPIO1_A4 -- pin15
-        led_name   = "led_yellow";
-    };
+	led_yellow: led_yellow {
+		compatible = "rockchip,led_yellow";
+		led_gpio   = <&gpio1 4 GPIO_ACTIVE_LOW>;      // GPIO1_A4 -- pin15
+		led_name   = "led_yellow";
+	};
 
 	button_blue: button_blue {
 		compatible  = "rockchip,button_blue";
