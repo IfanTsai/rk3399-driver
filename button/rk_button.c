@@ -17,7 +17,7 @@ struct button_data {
 	const char *name;
 	struct miscdevice misc;
 	struct timer_list timer;    /* for removing shake */
-	volatile int ev_press;      /* wait's condition */
+	int ev_press;               /* wait's condition */
 	wait_queue_head_t waitq;    /* wait queue head */
 	int value;                  /* button value, to user */
 };
@@ -27,59 +27,55 @@ static DECLARE_WAIT_QUEUE_HEAD(button_waitq);
 static void button_timeout_fun(unsigned long data)
 {
 	struct button_data *button_data = (struct button_data *)data;
-	static unsigned char is_first = 1;
 
-	if (is_first) {
-		is_first = 0;
-		return;
-	}
-	
-	button_data->value = gpio_get_value(button_data->gpio);   /* read key value */
-    button_data->ev_press = 1;                     /* set wait's condition */
-   	wake_up_interruptible(&button_data->waitq);    /* wake up */
+	button_data->value = gpio_get_value(button_data->gpio); /* read key value */
+	button_data->ev_press = 1;                               /* set wait's condition */
+	wake_up_interruptible(&button_data->waitq);              /* wake up */
 }
 
 static irqreturn_t button_interrupt(int irq, void *arg)
 {
 	struct button_data *button_data = arg;
 
-	mod_timer(&button_data->timer, jiffies + HZ / 100);
-    return IRQ_HANDLED;
+	mod_timer(&button_data->timer, jiffies + HZ / 100); /* set time and active timer */
+	return IRQ_HANDLED;
 }
 
-static ssize_t button_read(struct file *file, char __user *buf, size_t count, loff_t *offp)
+static ssize_t button_read(struct file *file, char __user *ubuf,
+						size_t count, loff_t *offp)
 {
 	unsigned long err;
+	char kbuf[8] = { 0 };
 	struct button_data *button_data;
 
 	button_data = container_of(file->private_data, struct button_data, misc);
 
 	if (!button_data->ev_press) {
 		if (file->f_flags & O_NONBLOCK)      /* no block */
-		    return -EAGAIN;
+			return -EAGAIN;
 		else                                 /* block */
-		    wait_event_interruptible(button_data->waitq, button_data->ev_press);     /* wait */
+			wait_event_interruptible(button_data->waitq, button_data->ev_press);     /* wait */
 	}
 
 	button_data->ev_press = 0;    /* clear wait's condition */
 
-	err = copy_to_user((void *)buf, (const void *)(&button_data->value),
-	               min(sizeof(button_data->value), count));
+	sprintf(kbuf, "%d", button_data->value);
+	err = copy_to_user(ubuf, kbuf, min(sizeof(kbuf), count));
 
-	return err ? -EFAULT : min(sizeof(button_data->value), count);
+	return err ? -EFAULT : min(sizeof(kbuf), count);
 }
 
 static unsigned int button_poll(struct file *file, struct poll_table_struct *wait)
 {
-    unsigned int mask = 0;
+	unsigned int mask = 0;
 	struct button_data *button_data;
 
 	button_data = container_of(file->private_data, struct button_data, misc);
-    poll_wait(file, &button_data->waitq, wait);
-    if (button_data->ev_press)
-        mask |= POLLIN | POLLRDNORM;
+	poll_wait(file, &button_data->waitq, wait);
+	if (button_data->ev_press)
+		mask |= POLLIN | POLLRDNORM;
 
-    return mask;
+	return mask;
 }
 
 static int button_open(struct inode *inode, struct file *file)
@@ -89,15 +85,15 @@ static int button_open(struct inode *inode, struct file *file)
 
 static int button_close(struct inode *inode, struct file *file)
 {
-    return 0;
+	return 0;
 }
 
-static struct file_operations button_misc_fops = {
-    .owner   =   THIS_MODULE,
-    .open    =   button_open,
-    .release =   button_close,
-    .read    =   button_read,
-    .poll    =   button_poll,
+static const struct file_operations button_misc_fops = {
+	.owner   =   THIS_MODULE,
+	.open    =   button_open,
+	.release =   button_close,
+	.read    =   button_read,
+	.poll    =   button_poll,
 };
 
 static int button_probe(struct platform_device *pdev)
@@ -149,9 +145,8 @@ static int button_probe(struct platform_device *pdev)
 
 	init_timer(&button_data->timer);
 	button_data->timer.function = button_timeout_fun;
-	button_data->timer.data      = (unsigned long)button_data;
-	add_timer(&button_data->timer);
-	
+	button_data->timer.data     = (unsigned long)button_data;
+
 	platform_set_drvdata(pdev, button_data);
 	pr_err("===> %s: probe success\n", button_name);
 	return 0;
@@ -178,6 +173,7 @@ static int button_remove(struct platform_device *pdev)
 
 static const struct of_device_id rk_button_of_match[] = {
 	{ .compatible = "rockchip,button_blue", },
+	{ .compatible = "rockchip,button_red", },
 	{ },
 };
 
