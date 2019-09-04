@@ -23,38 +23,44 @@
 	model = "FriendlyElec NanoPi NEO4";
 	compatible = "friendlyelec,nanopi-neo4", "rockchip,rk3399";
 
-    /* Ifan Tsai added */
-    ////////////////////////////////////////////////////////////
+	/* Ifan Tsai added */
+	////////////////////////////////////////////////////////////
 	interrupt-parent = <&gic>;
 	#address-cells = <2>;
 	#size-cells = <2>;
 
 	rktimer2: rk_timer@ff850020 {
-		compatible = "rockchip,rk-timer2";
-		reg = <0x0 0xff850020 0x0 0x100>;
-		interrupts = <GIC_SPI 82 IRQ_TYPE_LEVEL_HIGH 0>;
-		clocks = <&cru PCLK_TIMER1>, <&cru SCLK_TIMER01>;
+		compatible  = "rockchip,rk-timer2";
+		reg         = <0x0 0xff850020 0x0 0x100>;
+		interrupts  = <GIC_SPI 82 IRQ_TYPE_LEVEL_HIGH 0>;
+		clocks      = <&cru PCLK_TIMER1>, <&cru SCLK_TIMER01>;
 		clock-names = "pclk", "timer";
 	};
 
     led_red: led_red {
         compatible = "rockchip,led_red";
-        led_gpio = <&gpio1 0 GPIO_ACTIVE_LOW>;      // GPIO1_A0 -- pin7
-        led_name = "led_red";
+        led_gpio   = <&gpio1 0 GPIO_ACTIVE_LOW>;      // GPIO1_A0 -- pin7
+        led_name   = "led_red";
     };
 
     led_green: led_green {
         compatible = "rockchip,led_green";
-        led_gpio = <&gpio1 1 GPIO_ACTIVE_LOW>;      // GPIO1_A1 -- pin11
-        led_name = "led_green";
+        led_gpio   = <&gpio1 1 GPIO_ACTIVE_LOW>;      // GPIO1_A1 -- pin11
+        led_name   = "led_green";
     };
 
     led_yellow: led_yellow {
         compatible = "rockchip,led_yellow";
-        led_gpio = <&gpio1 4 GPIO_ACTIVE_LOW>;      // GPIO1_A4 -- pin15
-        led_name = "led_yellow";
+        led_gpio   = <&gpio1 4 GPIO_ACTIVE_LOW>;      // GPIO1_A4 -- pin15
+        led_name   = "led_yellow";
     };
-    /////////////////////////////////////////////////////////////
+
+	button_blue: button_blue {
+		compatible  = "rockchip,button_blue";
+		button_gpio = <&gpio1 18 IRQ_TYPE_EDGE_BOTH>;   // GPIO1_C2 -- pin12
+		button_name = "button_blue";
+	};
+	/////////////////////////////////////////////////////////////
 };
 
 &mach {
