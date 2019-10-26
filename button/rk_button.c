@@ -22,7 +22,7 @@ struct button_data {
 	int value;                  /* button value, to user */
 };
 
-static DECLARE_WAIT_QUEUE_HEAD(button_waitq);
+//static DECLARE_WAIT_QUEUE_HEAD(button_waitq);
 
 static void button_timeout_fun(unsigned long data)
 {
