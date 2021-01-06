@@ -4,16 +4,15 @@ obj-m	+= rk_led.o
 
 all:
 	make -C $(KERN_DIR) M=`pwd` modules
-	aarch64-linux-gcc led_app.c -o led_app -static
+	aarch64-linux-gcc led_app.c -o led_app.o -static
 
 .PHONY: push
 push:
 	adb root
 	adb push rk_led.ko /data
-	adb push led_app /data
-	adb shell chmod 777 /data/led_app
+	adb push led_app.o /data
+	adb shell chmod 777 /data/led_app.o
 
 .PHONY: clean
 clean:
 	make -C $(KERN_DIR) M=`pwd` modules clean
-	-rm -rf led_app
